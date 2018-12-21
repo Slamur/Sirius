@@ -27,10 +27,10 @@ const int MODULO = 1000'000'000 + 31;
 inline int add(int a, int b) {
     return (a + b) % MODULO;
 }
-//
-//inline ll subtract(ll a, ll b) {
-//    return add(a, MODULO - b % MODULO);
-//}
+
+inline ll subtract(ll a, ll b) {
+    return add(a, MODULO - b % MODULO);
+}
 
 inline int multiply(ll a, ll b) {
     return (int)((a * b) % MODULO);
