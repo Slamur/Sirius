@@ -122,15 +122,21 @@ inline int multiply(ll a, ll b) {
 
 struct DSU {
     vi parents;
+    vi sizes;
     vi ranks;
 
-    DSU(size_t n)
-            : parents(n)
-            , ranks(n, 1)
-    {
+    DSU(size_t n = 1) {
+        resize(n);
+    }
+
+    void resize(size_t n) {
+        parents.resize(n);
         for (int v = 0; v < n; ++v) {
             parents[v] = v;
         }
+
+        ranks.resize(n, 1);
+        sizes.resize(n, 0);
     }
 
     int get(int v) {
@@ -140,9 +146,13 @@ struct DSU {
         return parents[v] = get(parent);
     }
 
-    bool merge(int f, int t) {
+    bool merge(int f, int t, int weight = 1, bool multiple_edges = false) {
         int a = get(f);
         int b = get(t);
+
+        if (multiple_edges) {
+            sizes[a] += weight;
+        }
 
         if (a == b) return false;
 
@@ -152,12 +162,18 @@ struct DSU {
 
         parents[b] = a;
         if (ranks[a] == ranks[b]) ++ranks[a];
+        sizes[a] += sizes[b];
+        if (!multiple_edges) sizes[a] += weight;
 
         return true;
     }
 
     bool connected(int f, int t) {
         return get(f) == get(t);
+    }
+
+    int get_size(int v) {
+        return sizes[get(v)];
     }
 };
 
@@ -169,45 +185,43 @@ int main() {
     size_t n = read_size();
     size_t m = read_size();
 
-    vector<vii> graph(n);
+    typedef pair<int, ii> edge_t;
+
+    vector<edge_t> edges(m);
     for (int i = 0; i < m; ++i) {
-        int from = read_int() - 1;
-        int to = read_int() - 1;
+        int from = read_int();
+        int to = read_int();
         int weight = read_int();
 
-        graph[from].push_back({ to, weight });
-        graph[to].push_back({ from, weight });
+        edges[i] = { weight, { from, to }};
     }
 
-    const int INF = 100500;
-
     auto mst_kruskal = [&]() {
-        typedef pair<int, ii> edge_t;
-
-        vector<edge_t> edges;
-        for (int v = 0; v < n; ++v) {
-            for (ii & edge: graph[v]) {
-                if (v < edge.first) edges.push_back({ edge.second, { v, edge.first }});
-            }
-        }
-
         sort(edges.begin(), edges.end());
 
-        int total_weight = 0;
+        ll total_weight = 0;
+        int components_count = n;
 
         DSU dsu(n);
         for (auto & edge : edges) {
             int from = edge.second.first, to = edge.second.second;
             if (dsu.merge(from, to)) {
                 total_weight += edge.first;
+                --components_count;
             }
         }
 
-        return total_weight;
+        bool connected = components_count == 1;
+        return make_pair(connected, total_weight);
     };
 
-    int answer = mst_kruskal();
-    cout << answer << ENDL;
+    auto answer = mst_kruskal();
+    if (answer.first) {
+        cout << answer.second;
+    } else {
+        cout << "NON-CONNECTED";
+    }
+    cout << ENDL;
 
     return 0;
 }

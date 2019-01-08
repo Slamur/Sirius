@@ -122,15 +122,21 @@ inline int multiply(ll a, ll b) {
 
 struct DSU {
     vi parents;
+    vi sizes;
     vi ranks;
 
-    DSU(size_t n)
-            : parents(n)
-            , ranks(n, 1)
-    {
+    DSU(size_t n = 1) {
+        resize(n);
+    }
+
+    void resize(size_t n) {
+        parents.resize(n);
         for (int v = 0; v < n; ++v) {
             parents[v] = v;
         }
+
+        ranks.resize(n, 1);
+        sizes.resize(n, 0);
     }
 
     int get(int v) {
@@ -140,9 +146,13 @@ struct DSU {
         return parents[v] = get(parent);
     }
 
-    bool merge(int f, int t) {
+    bool merge(int f, int t, int weight = 1, bool multiple_edges = false) {
         int a = get(f);
         int b = get(t);
+
+        if (multiple_edges) {
+            sizes[a] += weight;
+        }
 
         if (a == b) return false;
 
@@ -152,12 +162,18 @@ struct DSU {
 
         parents[b] = a;
         if (ranks[a] == ranks[b]) ++ranks[a];
+        sizes[a] += sizes[b];
+        if (!multiple_edges) sizes[a] += weight;
 
         return true;
     }
 
     bool connected(int f, int t) {
         return get(f) == get(t);
+    }
+
+    int get_size(int v) {
+        return sizes[get(v)];
     }
 };
 
@@ -168,46 +184,40 @@ int main() {
 
     size_t n = read_size();
     size_t m = read_size();
+    size_t k = read_size();
 
-    vector<vii> graph(n);
-    for (int i = 0; i < m; ++i) {
-        int from = read_int() - 1;
-        int to = read_int() - 1;
-        int weight = read_int();
+    vii edges;
+    read_pairs(edges, m);
 
-        graph[from].push_back({ to, weight });
-        graph[to].push_back({ from, weight });
+    typedef pair<bool, ii> query_t;
+
+    vector<query_t> queries(k);
+    for (int i = 0; i < k; ++i) {
+        bool ask = read_string() == "ask";
+        int from = read_int(), to = read_int();
+        queries[i] = { ask, { from, to }};
     }
 
-    const int INF = 100500;
+    vi answers;
 
-    auto mst_kruskal = [&]() {
-        typedef pair<int, ii> edge_t;
+    DSU dsu(n + 1);
+    reverse(queries.begin(), queries.end());
 
-        vector<edge_t> edges;
-        for (int v = 0; v < n; ++v) {
-            for (ii & edge: graph[v]) {
-                if (v < edge.first) edges.push_back({ edge.second, { v, edge.first }});
-            }
+    for (auto & query : queries) {
+        int from = query.second.first, to = query.second.second;
+
+        if (query.first) {
+            answers.push_back(dsu.connected(from, to));
+        } else {
+            dsu.merge(from, to);
         }
+    }
 
-        sort(edges.begin(), edges.end());
+    reverse(answers.begin(), answers.end());
 
-        int total_weight = 0;
-
-        DSU dsu(n);
-        for (auto & edge : edges) {
-            int from = edge.second.first, to = edge.second.second;
-            if (dsu.merge(from, to)) {
-                total_weight += edge.first;
-            }
-        }
-
-        return total_weight;
-    };
-
-    int answer = mst_kruskal();
-    cout << answer << ENDL;
+    for (auto answer : answers) {
+        cout << (answer ? "YES" : "NO") << ENDL;
+    }
 
     return 0;
 }
